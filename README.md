@@ -5,7 +5,7 @@ AI-powered archaeological field intelligence system.
 Built for real field use — logs artifact discoveries with GPS coordinates and 
 photos, runs AI classification, and surfaces live insights to site supervisors.
 
-Developed from experience on the UNESCO Dig in History project (Erasmus+ 2026).
+
 
 ## Stack
 - FastAPI + Python
