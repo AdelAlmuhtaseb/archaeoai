@@ -40,8 +40,19 @@ def create_artifact(artifact: ArtifactCreate, db: Session = Depends(get_db)):
     return {"id": str(db_artifact.id), "name": db_artifact.name, "status": "created"}
 
 @router.get("/")
-def list_artifacts(db: Session = Depends(get_db)):
-    artifacts = db.query(Artifact).all()
+def list_artifacts(
+    period: Optional[str] = None,
+    site_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Artifact)
+
+    if period:
+        query = query.filter(Artifact.period == period)
+    if site_id:
+        query = query.filter(Artifact.site_id == site_id)
+
+    artifacts = query.all()
     return [{"id": str(a.id), "name": a.name, "period": a.period} for a in artifacts]
 
 @router.get("/{artifact_id}")
@@ -50,3 +61,34 @@ def get_artifact(artifact_id: str, db: Session = Depends(get_db)):
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
     return {"id": str(artifact.id), "name": artifact.name, "period": artifact.period, "description": artifact.description}
+
+class ArtifactUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    period: Optional[str] = None
+    condition: Optional[str] = None
+    discovered_by: Optional[str] = None
+
+@router.put("/{artifact_id}")
+def update_artifact(artifact_id: str, artifact: ArtifactUpdate, db: Session = Depends(get_db)):
+    db_artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    if not db_artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    update_data = artifact.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_artifact, field, value)
+
+    db.commit()
+    db.refresh(db_artifact)
+    return {"id": str(db_artifact.id), "name": db_artifact.name, "status": "updated"}
+
+@router.delete("/{artifact_id}")
+def delete_artifact(artifact_id: str, db: Session = Depends(get_db)):
+    db_artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    if not db_artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    db.delete(db_artifact)
+    db.commit()
+    return {"status": "deleted", "id": artifact_id}
